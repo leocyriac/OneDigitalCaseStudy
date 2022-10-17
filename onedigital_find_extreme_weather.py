@@ -41,8 +41,8 @@ def check_column_names_match(file_list):
             print(f"Expected column names in file : {column_list}")
             first_time = False
 
-            #print(type(column_list))
-            #print(type(df.columns))
+            # print(type(column_list))
+            # print(type(df.columns))
 
         if list(column_list) != list(df.columns):
             return False
@@ -54,28 +54,43 @@ def data_reconciliation(file_list):
     """
     Reconciling data using the columns Transpiration and Rain
     :param file_list: list of files passed in as parameter
-    :return:
+    :return: List of files rejected due to reconciliation failed.
     """
+    rejected_files_list = []
     for file in file_list:
-        df = pd.read_csv(file, encoding='windows-1252', skiprows=11, skip_blank_lines=True, engine='python')
+        try:
+            df = pd.read_csv(file,
+                             encoding='windows-1252',
+                             skiprows=12,
+                             usecols=['(mm)', '(mm).1'],
+                             skip_blank_lines=True,
+                             engine='python')
 
-        if first_time:
-            column_list = df.columns
-            print("Checking if all files have same column names and order at row 12 of every file")
-            print(f"Expected column names in file : {column_list}")
-            first_time = False
+            df['(mm)'] = pd.to_numeric(df['(mm)'], errors='coerce').fillna(0)
+            df['(mm).1'] = pd.to_numeric(df['(mm).1'], errors='coerce').fillna(0)
 
-            #print(type(column_list))
-            #print(type(df.columns))
+            calculated_sum_transpiration = df.sum().round(2)[0]
+            calculated_sum_rain = df.sum().round(2)[1]
 
-        if list(column_list) != list(df.columns):
-            return False
+            sum_transpiration = df.iloc[-1, 0]
+            sum_rain = df.iloc[-1, 1]
 
-    return True
+            if (calculated_sum_transpiration - sum_transpiration) != sum_transpiration or \
+                    (calculated_sum_rain - sum_rain) != sum_rain:
+                rejected_files_list.append(file)
+        except:
+            print(f"File: {file}")
+            print(f"calculated_sum_transpiration: {calculated_sum_transpiration}")
+            print(f"sum_transpiration: {sum_transpiration}")
+            print(f"calculated_sum_rain: {calculated_sum_rain}")
+            print(f"sum_transpiration: {sum_rain}")
+    return rejected_files_list
 
 
 def get_df_from_csv(file_name):
-    return pd.read_csv(file_name, encoding='windows-1252', skiprows=12, skipfooter=1, skip_blank_lines=True, engine='python')
+    return pd.read_csv(file_name, encoding='windows-1252', skiprows=12, skipfooter=1, skip_blank_lines=True,
+                       engine='python')
+
 
 # Define configuration parameters.
 base_path = "/Users/leocyriac/Wesfarmers-OneDigital/tables"
@@ -84,6 +99,11 @@ station_suburb_dict = {"BELMONT": base_path + "/wa/perth_metro/*.csv",
                        "NOTTING HILL": base_path + "/vic/moorabbin_airport/*.csv"
                        }
 in_temperature = 35
+
+print("---------------------------------------------------------------------------------")
+print("CONFIGURATIONS USED FOR THIS PROCESS")
+print("---------------------------------------------------------------------------------")
+print(f"Input temperature threshold: {in_temperature} ")
 
 file_list = []
 for locality, path in station_suburb_dict.items():
@@ -107,6 +127,14 @@ else:
     print("Files have different column names or column order")
     exit(2)
 
+print("---------------------------------------------------------------------------------")
+csv_exclude_list = data_reconciliation(file_list)
+
+if len(csv_exclude_list) == 0:
+    print("All files reconciled successfully")
+else:
+    print(f"These files couldn't be reconciled and will be excluded from processing: {csv_exclude_list}")
+
 all_localities_df = pd.DataFrame()
 for locality, path in station_suburb_dict.items():
     print("---------------------------------------------------------------------------------")
@@ -126,6 +154,7 @@ for locality, path in station_suburb_dict.items():
     print(f"No. of CSV files processed: {len(csv_files)}")
     print(f"Total Number of rows processed: {big_df.shape[0]}")
 
+print("---------------------------------------------------------------------------------")
 # print(all_localities_df.shape)
 # all_localities_df.info()
 
@@ -168,6 +197,7 @@ bom_df.drop(['station_name',
 bom_df["date"] = pd.to_datetime(bom_df["date"])
 # to deal with missing values errors='coerce' is used. This will fill those can't be converted to NaN
 bom_df["maximum_temperature"] = pd.to_numeric(bom_df["maximum_temperature"], errors='coerce')
+bom_df = bom_df.dropna()
 # bom_df.info()
 
 bom_df[bom_df["maximum_temperature"].isna()]
