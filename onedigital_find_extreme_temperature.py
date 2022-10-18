@@ -12,21 +12,18 @@ import onedigital_utilities as ut
 # Base folder path where all of data is stored
 base_path = "/Users/leocyriac/Wesfarmers-OneDigital/tables"
 
+# Input store addresses
 store_addresses_dict = {"BELMONT" : "Bunnings Notting Hill, 232 Ferntree Gully Rd, Notting Hill VIC 3168",
                    "GEELONG" : "Officeworks Geelong, 150 Malop St, Geelong VIC 3220",
                    "NOTTING HILL" : "Kmart Belmont, Belmont Ave, Belmont WA 6104"
                   }
 
-location_lat_longs_dict = ut.get_lat_long_values_of_address(store_addresses_dict)
+# Get the lat/long for the stores
+store_lat_longs_dict = ut.get_lat_long_values_of_address(store_addresses_dict)
 
-station_suburb_dict = ut.get_data_path_for_nearest_station(location_lat_longs_dict, base_path)
+# Get the nearest weather station data path to be used for each of the store
+station_suburb_dict = ut.get_data_path_for_nearest_station(store_lat_longs_dict, base_path)
 
-
-# List of suburbs and closest weather station's data
-#station_suburb_dict = {"BELMONT": base_path + "/wa/perth_metro/*.csv",
-#                       "GEELONG": base_path + "/vic/breakwater_(geelong_racecourse)/*.csv",
-#                       "NOTTING HILL": base_path + "/vic/moorabbin_airport/*.csv"
-#                       }
 # Threshold temperature to compare against.
 in_temperature = 35
 in_num_years = 9
